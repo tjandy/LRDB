@@ -104,7 +104,14 @@ inline json::value to_json(lua_State* L, int index, int max_recursive = 1) {
             json::value& b = obj[key];
 
             b = to_json(L, -1, max_recursive - 1);
-          }
+		  }else if (lua_type(L, -2) == LUA_TNUMBER) {
+			  char tmp[10] = { 0 };
+			  int n = (int)lua_tonumber(L, -2);
+			  sprintf_s(tmp, "%d", n );
+			  json::value& b = obj[tmp];
+
+			  b =  to_json(L, -1, max_recursive - 1);
+		  }
           lua_pop(L, 1);  // pop value
         }
         return json::value(obj);
@@ -816,6 +823,33 @@ class debugger {
     }
   }
 
+  static bool is_same_filename(const char * str1, const char *str2){
+	 
+	  int len = strlen(str1) -1;
+	  
+	  while (true)
+	  {
+		  char c1 = str1[len];
+
+		  if ((c1 == '\\') || (c1 == '/'))
+			  break;
+		  //name1 = str1 + len;
+		  len--;
+	  }
+	  const char * name1 = str1 + len + 1;
+	  len = strlen(str2) -1;
+	  while (true)
+	  {
+		  char c1 = str2[len];
+
+		  if ((c1 == '\\') || (c1 == '/'))
+			  break;
+		  //name1 = str1 + len;
+		  len--;
+	  }
+	  const char * name2 = str2 + len + 1;
+	  return is_file_path_match(name1, name2);
+  }
   breakpoint_info* search_breakpoints(debug_info& debuginfo) {
     if (line_breakpoints_.empty()) {
       return 0;
@@ -832,7 +866,13 @@ class debugger {
         if (source[0] == '@') {
           source++;
         }
-        if (is_file_path_match(it->file.c_str(), source)) {
+		if (source[0] == '.'){
+			if (source[1] == '/' || source[1] == '\\')
+				source = source + 2;
+		}
+
+		if (is_same_filename(it->file.c_str(), source)) {
+		//if (std::string::npos != it->file.find(source) ){
           return &(*it);
         }
       }
